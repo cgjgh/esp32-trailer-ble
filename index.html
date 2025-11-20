@@ -1,0 +1,434 @@
+<html lang="en" class="dark"> <head> <meta charset="UTF-8"> <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"> <title>Trailer Pro</title>
+
+<!-- PWA Meta Tags -->
+<meta name="theme-color" content="#111827">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Trailer Pro">
+
+<!-- Manifest -->
+<link rel="manifest" href="data:application/manifest+json;base64,ewogICJuYW1lIjogIlRyYWlsZXIgUHJvIENvbnRyb2wiLAogICJzaG9ydF9uYW1lIjogIlRyYWlsZXIgUHJvIiwKICAic3RhcnRfdXJsIjogIi4iLAogICJkaXNwbGF5IjogInN0YW5kYWxvbmUiLAogICJiYWNrZ3JvdW5kX2NvbG9yIjogIiMxMTE4MjciLAogICJ0aGVtZV9jb2xvciIjogIiMxMTE4MjciLAogICJpY29ucyI6IFt7CiAgICAic3JjIjogImh0dHBzOi8vY2RuLmpzZGVsaXZyLm5ldC9ucG0vQGZvcnRhd2Vzb21lL2ZvbnRhd2Vzb21lLWZyZWVAc3Zncy9zb2xpZC90cnVjay1yYW1wLWJveC5zdmciLAogICAgInNpemVzIjogIjUxMng1MTIiLAogICAgInR5cGUiOiAiaW1hZ2Uvc3ZnK3htbCIKICB9XQp9">
+
+<!-- Libraries -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<script>
+    tailwind.config = {
+        darkMode: 'class',
+        theme: {
+            extend: {
+                colors: {
+                    gray: { 900: '#111827', 850: '#18212f', 800: '#1f2937', 750: '#2d3748', 700: '#374151' }
+                }
+            }
+        }
+    }
+</script>
+
+<style>
+    [v-cloak] { display: none; }
+    body { -webkit-tap-highlight-color: transparent; }
+    
+    .gauge-circle {
+        transition: stroke-dashoffset 0.5s ease-in-out;
+        transform: rotate(-90deg);
+        transform-origin: 50% 50%;
+    }
+    
+    .trailer-body { fill: #e5e7eb; stroke: #9ca3af; stroke-width: 3px; }
+    .dark .trailer-body { fill: #374151; stroke: #6b7280; }
+    
+    .light { transition: all 0.1s ease-in-out; stroke: #111827; stroke-width: 1px; }
+    
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 3px; }
+    
+    .modal-enter-active, .modal-leave-active { transition: opacity 0.3s ease; }
+    .modal-enter-from, .modal-leave-to { opacity: 0; }
+</style>
+</head> <body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 min-h-screen flex flex-col select-none transition-colors duration-300">
+
+<div id="app" v-cloak class="flex-grow flex flex-col h-screen overflow-hidden">
+    
+    <!-- Top Bar -->
+    <header class="flex-none bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4 flex justify-between items-center z-10 shadow-sm">
+        <div class="flex items-center gap-3">
+            <i class="fas fa-truck-ramp-box text-blue-600 dark:text-blue-500 text-2xl"></i>
+            <div>
+                <h1 class="font-bold text-lg leading-tight">Trailer Pro</h1>
+                <div class="text-xs flex items-center gap-2" :class="bleConnected ? 'text-green-600 dark:text-green-400' : 'text-gray-500'">
+                    <div class="w-2 h-2 rounded-full" :class="bleConnected ? 'bg-green-500 animate-pulse' : 'bg-gray-400'"></div>
+                    {{ statusMessage }}
+                </div>
+            </div>
+        </div>
+        <div class="flex gap-2">
+            <button @click="showSettings = true" class="p-2.5 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 transition">
+                <i class="fas fa-sliders"></i>
+            </button>
+            <button @click="connectBLE" class="px-4 py-2 rounded-lg font-bold shadow-lg transition flex items-center gap-2"
+                :class="bleConnected ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'">
+                <i class="fas" :class="bleConnected ? 'fa-power-off' : 'fa-bluetooth'"></i>
+                <span class="hidden sm:inline">{{ bleConnected ? 'Disconnect' : 'Connect' }}</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Scrollable Area -->
+    <main class="flex-grow overflow-y-auto p-4 pb-24 space-y-6">
+        
+        <!-- Gauges Section -->
+        <div class="grid grid-cols-2 gap-4">
+            <!-- Voltage Gauge -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 flex flex-col items-center shadow-md relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-1 h-full bg-yellow-500"></div>
+                <span class="text-gray-500 dark:text-gray-400 text-xs font-bold uppercase tracking-wider mb-2">Battery</span>
+                <div class="relative w-24 h-24">
+                    <svg class="w-full h-full" viewBox="0 0 100 100">
+                        <circle class="text-gray-200 dark:text-gray-700 stroke-current" stroke-width="8" cx="50" cy="50" r="40" fill="transparent"></circle>
+                        <circle class="text-yellow-500 gauge-circle stroke-current" stroke-width="8" stroke-linecap="round" cx="50" cy="50" r="40" fill="transparent"
+                            :stroke-dasharray="251.2" :stroke-dashoffset="251.2 - (251.2 * (Math.min(voltage, 16) / 16))"></circle>
+                    </svg>
+                    <div class="absolute inset-0 flex flex-col items-center justify-center">
+                        <span class="text-xl font-bold">{{ voltage.toFixed(1) }}</span>
+                        <span class="text-xs text-gray-500">V</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Current Gauge -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 flex flex-col items-center shadow-md relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
+                <span class="text-gray-500 dark:text-gray-400 text-xs font-bold uppercase tracking-wider mb-2">Load</span>
+                <div class="relative w-24 h-24">
+                    <svg class="w-full h-full" viewBox="0 0 100 100">
+                        <circle class="text-gray-200 dark:text-gray-700 stroke-current" stroke-width="8" cx="50" cy="50" r="40" fill="transparent"></circle>
+                        <circle class="text-blue-500 gauge-circle stroke-current" stroke-width="8" stroke-linecap="round" cx="50" cy="50" r="40" fill="transparent"
+                            :stroke-dasharray="251.2" :stroke-dashoffset="251.2 - (251.2 * (Math.min(current, 10) / 10))"></circle>
+                    </svg>
+                    <div class="absolute inset-0 flex flex-col items-center justify-center">
+                        <span class="text-xl font-bold">{{ current.toFixed(1) }}</span>
+                        <span class="text-xs text-gray-500">A</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trailer Visualization -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 shadow-md flex justify-center">
+            <svg class="w-full max-w-md h-auto" viewBox="0 0 1000 400" xmlns="http://www.w3.org/2000/svg">
+                <rect x="10" y="100" width="980" height="250" rx="15" class="trailer-body" />
+                <rect x="100" y="350" width="150" height="40" rx="5" class="fill-gray-800 dark:fill-gray-900" />
+                <rect x="750" y="350" width="150" height="40" rx="5" class="fill-gray-800 dark:fill-gray-900" />
+
+                <g transform="translate(40, 180)">
+                    <circle r="30" :fill="lightStates.brake ? '#ef4444' : '#4b5563'" class="light" />
+                    <circle cy="90" r="25" :fill="renderLeft ? '#f97316' : '#4b5563'" class="light" />
+                </g>
+                <g transform="translate(960, 180)">
+                    <circle r="30" :fill="lightStates.brake ? '#ef4444' : '#4b5563'" class="light" />
+                    <circle cy="90" r="25" :fill="renderRight ? '#f97316' : '#4b5563'" class="light" />
+                </g>
+                <rect x="470" y="235" width="60" height="30" rx="5" :fill="lightStates.reverse ? '#ffffff' : '#4b5563'" class="light" />
+                <g v-for="i in 5" :transform="`translate(${40 + (i-1)*230}, 120)`">
+                    <circle r="8" :fill="lightStates.marker ? '#f59e0b' : '#4b5563'" class="light"/>
+                </g>
+            </svg>
+        </div>
+
+        <!-- Controls Grid -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <button @click="toggle('brake')" :class="getBtnClass('brake', 'bg-red-600')" class="p-4 rounded-lg flex flex-col items-center gap-2 transition active:scale-95">
+                <i class="fas fa-stop-circle text-2xl"></i><span class="font-semibold">Brake</span>
+            </button>
+            <button @click="toggle('reverse')" :class="getBtnClass('reverse', 'bg-gray-300 text-gray-900')" class="p-4 rounded-lg flex flex-col items-center gap-2 transition active:scale-95">
+                <i class="fas fa-backward text-2xl"></i><span class="font-semibold">Reverse</span>
+            </button>
+            <button @click="toggle('marker')" :class="getBtnClass('marker', 'bg-amber-500')" class="p-4 rounded-lg flex flex-col items-center gap-2 transition active:scale-95">
+                <i class="fas fa-lightbulb text-2xl"></i><span class="font-semibold">Marker</span>
+            </button>
+            <button @click="toggle('turnLeft')" :class="getBtnClass('turnLeft', 'bg-orange-500')" class="p-4 rounded-lg flex flex-col items-center gap-2 transition active:scale-95">
+                <i class="fas fa-arrow-left text-2xl"></i><span class="font-semibold">Left</span>
+            </button>
+            <button @click="toggle('turnRight')" :class="getBtnClass('turnRight', 'bg-orange-500')" class="p-4 rounded-lg flex flex-col items-center gap-2 transition active:scale-95">
+                <i class="fas fa-arrow-right text-2xl"></i><span class="font-semibold">Right</span>
+            </button>
+            <button @click="toggle('hazard')" :class="getBtnClass('hazard', 'bg-orange-600')" class="p-4 rounded-lg flex flex-col items-center gap-2 transition active:scale-95">
+                <i class="fas fa-triangle-exclamation text-2xl"></i><span class="font-semibold">Hazard</span>
+            </button>
+            <button @click="toggle('aux')" :class="getBtnClass('aux', 'bg-indigo-600')" class="col-span-2 sm:col-span-3 p-4 rounded-lg flex flex-row justify-center items-center gap-3 transition active:scale-95">
+                <i class="fas fa-bolt text-xl"></i><span class="font-semibold">Aux Power (Always On)</span>
+            </button>
+        </div>
+    </main>
+
+    <!-- Feedback Toast -->
+    <div v-if="toast.show" class="fixed bottom-6 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-full shadow-2xl z-50 font-semibold transition-all duration-300 whitespace-nowrap flex items-center gap-3"
+        :class="toast.type === 'error' ? 'bg-red-500 text-white' : 'bg-gray-800 dark:bg-gray-700 text-white border border-gray-600'">
+        <i class="fas" :class="toast.type === 'error' ? 'fa-exclamation-circle' : 'fa-check-circle'"></i>
+        {{ toast.msg }}
+    </div>
+
+    <!-- Settings Modal -->
+    <transition name="modal">
+        <div v-if="showSettings" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-sm border border-gray-200 dark:border-gray-700 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                
+                <!-- Modal Header -->
+                <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-750">
+                    <h3 class="font-bold text-lg dark:text-white"><i class="fas fa-cog mr-2"></i>Settings</h3>
+                    <button @click="showSettings = false" class="text-gray-500 dark:text-gray-400 hover:text-red-500"><i class="fas fa-times text-xl"></i></button>
+                </div>
+                
+                <!-- Modal Body -->
+                <div class="p-6 space-y-6 overflow-y-auto">
+                    
+                    <!-- Theme Toggle -->
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Dark Mode</span>
+                        <button @click="toggleTheme" class="w-12 h-6 rounded-full p-1 transition-colors duration-300 focus:outline-none" :class="isDark ? 'bg-blue-600' : 'bg-gray-300'">
+                            <div class="w-4 h-4 bg-white rounded-full shadow-md transform transition-transform duration-300" :class="isDark ? 'translate-x-6' : ''"></div>
+                        </button>
+                    </div>
+                    <hr class="border-gray-200 dark:border-gray-700">
+
+                    <!-- Blink Speed -->
+                    <div>
+                        <label class="flex justify-between text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                            Blink Delay <span class="text-blue-600 dark:text-blue-400">{{ settings.delay }} ms</span>
+                        </label>
+                        <input type="range" min="50" max="3000" step="50" v-model.number="settings.delay" class="w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer accent-blue-500">
+                    </div>
+
+                    <!-- Blink Count -->
+                    <div>
+                        <label class="flex justify-between text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                            Blink Limit <span class="text-blue-600 dark:text-blue-400">{{ settings.limit === -1 ? 'Infinite' : settings.limit }}</span>
+                        </label>
+                        <div class="flex gap-2">
+                            <button @click="settings.limit = -1" class="flex-1 py-2 rounded border text-sm font-medium transition" :class="settings.limit === -1 ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-300 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'">Infinite</button>
+                            <input type="number" v-model.number="settings.limit" min="0" max="1000" class="flex-1 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded px-3 text-center focus:border-blue-500 outline-none dark:text-white" placeholder="Custom">
+                        </div>
+                    </div>
+                    
+                    <button @click="applySettings" class="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-bold shadow-md transition active:scale-95">
+                        Apply Settings
+                    </button>
+
+                    <hr class="border-gray-200 dark:border-gray-700">
+
+                    <!-- Firmware Update -->
+                    <div class="bg-gray-100 dark:bg-gray-900 p-4 rounded-lg border border-dashed border-gray-300 dark:border-gray-600">
+                        <h4 class="text-sm font-bold mb-2 dark:text-gray-200">Firmware Update (OTA)</h4>
+                        <input type="file" ref="fileInput" accept=".bin" class="block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-gray-700 dark:file:text-gray-200"/>
+                        
+                        <div v-if="ota.active" class="mt-3">
+                            <div class="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+                                <div class="bg-blue-600 h-2.5 rounded-full transition-all duration-200" :style="{ width: ota.progress + '%' }"></div>
+                            </div>
+                            <p class="text-xs text-center mt-1 dark:text-gray-400">{{ ota.progress }}%</p>
+                        </div>
+
+                        <button @click="startOTA" :disabled="ota.active" class="mt-3 w-full bg-gray-700 dark:bg-gray-600 hover:bg-gray-600 text-white py-2 rounded-lg text-sm font-medium transition disabled:opacity-50">
+                            {{ ota.active ? 'Updating...' : 'Upload Firmware' }}
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </transition>
+</div>
+
+<script>
+    const { createApp } = Vue;
+    
+    const UUIDS = {
+        SERVICE:    "4fafc201-1fb5-459e-8fcc-c5c9c331914b",
+        COMMAND:    "beb5483e-36e1-4688-b7f5-ea07361b26a8",
+        TELEMETRY:  "6e400002-b5a3-f393-e0a9-e50e24dcca9e",
+        SETTINGS:   "6e400003-b5a3-f393-e0a9-e50e24dcca9e",
+        OTA_DATA:   "6e400004-b5a3-f393-e0a9-e50e24dcca9e"
+    };
+
+    createApp({
+        data() {
+            return {
+                isDark: true,
+                bleConnected: false,
+                statusMessage: 'Ready',
+                voltage: 0, current: 0,
+                chars: {},
+                lightStates: { brake: false, reverse: false, marker: false, turnLeft: false, turnRight: false, hazard: false, aux: true },
+                blinkState: false, 
+                showSettings: false,
+                toast: { show: false, msg: '', type: 'info' },
+                settings: { delay: 500, limit: -1 },
+                
+                // OTA State
+                ota: { active: false, progress: 0 }
+            }
+        },
+        computed: {
+            renderLeft() { return (this.lightStates.turnLeft || this.lightStates.hazard) ? this.blinkState : false; },
+            renderRight() { return (this.lightStates.turnRight || this.lightStates.hazard) ? this.blinkState : false; }
+        },
+        mounted() {
+            // Dark Mode Init
+            const savedTheme = localStorage.getItem('theme');
+            this.isDark = savedTheme ? savedTheme === 'dark' : true;
+            this.applyTheme();
+
+            setInterval(() => { this.blinkState = !this.blinkState; }, 500);
+        },
+        methods: {
+            applyTheme() {
+                if (this.isDark) document.documentElement.classList.add('dark');
+                else document.documentElement.classList.remove('dark');
+                localStorage.setItem('theme', this.isDark ? 'dark' : 'light');
+            },
+            toggleTheme() {
+                this.isDark = !this.isDark;
+                this.applyTheme();
+            },
+            showToast(msg, type='info') {
+                this.toast = { show: true, msg, type };
+                setTimeout(() => this.toast.show = false, 3000);
+            },
+            getBtnClass(key, activeClass) {
+                return this.lightStates[key] 
+                    ? `${activeClass} text-white shadow-inner ring-2 ring-offset-2 ring-offset-gray-50 dark:ring-offset-gray-900 ring-gray-400/50` 
+                    : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700';
+            },
+
+            async connectBLE() {
+                if (this.bleConnected) { window.location.reload(); return; }
+                try {
+                    this.statusMessage = "Scanning...";
+                    const device = await navigator.bluetooth.requestDevice({
+                        filters: [{ name: 'ESP32-Trailer-Pro' }],
+                        optionalServices: [UUIDS.SERVICE]
+                    });
+
+                    device.addEventListener('gattserverdisconnected', () => {
+                        this.bleConnected = false;
+                        this.statusMessage = "Disconnected";
+                        this.showToast("Connection Lost", "error");
+                    });
+
+                    const server = await device.gatt.connect();
+                    const service = await server.getPrimaryService(UUIDS.SERVICE);
+                    
+                    this.chars.command = await service.getCharacteristic(UUIDS.COMMAND);
+                    this.chars.settings = await service.getCharacteristic(UUIDS.SETTINGS);
+                    this.chars.ota = await service.getCharacteristic(UUIDS.OTA_DATA);
+                    
+                    const telemChar = await service.getCharacteristic(UUIDS.TELEMETRY);
+                    await telemChar.startNotifications();
+                    telemChar.addEventListener('characteristicvaluechanged', this.handleTelemetry);
+
+                    this.bleConnected = true;
+                    this.statusMessage = "Connected";
+                    this.showToast("Connected");
+                } catch (err) {
+                    console.error(err);
+                    this.showToast(err.message, "error");
+                }
+            },
+
+            handleTelemetry(event) {
+                try {
+                    const decoder = new TextDecoder('utf-8');
+                    const json = JSON.parse(decoder.decode(event.target.value));
+                    if(json.v) this.voltage = json.v;
+                    if(json.c) this.current = json.c;
+                    if(json.s) Object.assign(this.lightStates, { 
+                        brake: json.s.brake, reverse: json.s.rev, marker: json.s.mark, 
+                        turnLeft: json.s.tl, turnRight: json.s.tr, hazard: json.s.haz, aux: json.s.aux 
+                    });
+                } catch(e) {}
+            },
+
+            async toggle(key) {
+                if (!this.bleConnected) return this.showToast("Not Connected", "error");
+                
+                const newState = !this.lightStates[key];
+                this.lightStates[key] = newState; // Optimistic update
+                
+                // Mutual Exclusivity
+                if (newState) {
+                    if (key === 'hazard') { this.lightStates.turnLeft = false; this.lightStates.turnRight = false; }
+                    if (key === 'turnLeft') { this.lightStates.hazard = false; this.lightStates.turnRight = false; }
+                    if (key === 'turnRight') { this.lightStates.hazard = false; this.lightStates.turnLeft = false; }
+                }
+
+                const cmd = `${key}:${newState ? 1 : 0}`;
+                const encoder = new TextEncoder();
+                await this.chars.command.writeValue(encoder.encode(cmd));
+            },
+
+            async applySettings() {
+                if(!this.chars.settings) return;
+                const payload = JSON.stringify(this.settings);
+                const encoder = new TextEncoder();
+                await this.chars.settings.writeValue(encoder.encode(payload));
+                this.showToast("Settings Saved");
+            },
+
+            // --- OTA LOGIC ---
+            async startOTA() {
+                const file = this.$refs.fileInput.files[0];
+                if (!file) return this.showToast("Select a file first", "error");
+                if (!this.bleConnected) return this.showToast("Connect BLE first", "error");
+
+                this.ota.active = true;
+                this.ota.progress = 0;
+                this.showToast("Starting Update...", "info");
+
+                try {
+                    // 1. Send Start Command
+                    const encoder = new TextEncoder();
+                    const startCmd = `ota_start:${file.size}`;
+                    await this.chars.command.writeValue(encoder.encode(startCmd));
+
+                    // 2. Read File
+                    const buffer = await file.arrayBuffer();
+                    const bytes = new Uint8Array(buffer);
+                    const chunkSize = 512; // Safe chunk size for BLE
+                    let offset = 0;
+
+                    // 3. Loop Chunks
+                    while (offset < bytes.length) {
+                        const end = Math.min(offset + chunkSize, bytes.length);
+                        const chunk = bytes.slice(offset, end);
+                        
+                        // Write without response for speed
+                        await this.chars.ota.writeValueWithoutResponse(chunk);
+                        
+                        offset += chunkSize;
+                        this.ota.progress = Math.round((offset / bytes.length) * 100);
+                        
+                        // Tiny delay to prevent congestion
+                        await new Promise(r => setTimeout(r, 10));
+                    }
+
+                    // 4. Send End Command
+                    this.showToast("Finalizing...", "info");
+                    await this.chars.command.writeValue(encoder.encode("ota_end"));
+                    
+                    this.showToast("Update Complete! Rebooting...", "success");
+                    setTimeout(() => window.location.reload(), 3000);
+
+                } catch (e) {
+                    console.error(e);
+                    this.showToast("Update Failed", "error");
+                    this.ota.active = false;
+                }
+            }
+        }
+    }).mount('#app');
+</script>
+</body> </html>
