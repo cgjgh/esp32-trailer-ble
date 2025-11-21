@@ -11,7 +11,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Trailer Pro">
     
-    <!-- Manifest (Cleaned JSON for PWA installation) -->
+    <!-- Manifest -->
     <link rel="manifest" href='data:application/manifest+json,{"name":"Trailer Pro","short_name":"Trailer Pro","start_url":".","display":"standalone","background_color":"#111827","theme_color":"#111827","icons":[{"src":"https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/svgs/solid/truck-ramp-box.svg","sizes":"512x512","type":"image/svg+xml"}]}'>
 
     <!-- Libraries -->
@@ -77,7 +77,7 @@
                 </button>
                 <button @click="connectBLE" class="px-4 py-2 rounded-lg font-bold shadow-lg transition flex items-center gap-2"
                     :class="bleConnected ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'">
-                    <i class="fas" :class="bleConnected ? 'fa-power-off' : 'fa-bluetooth'"></i>
+                    <i :class="bleConnected ? 'fas fa-power-off' : 'fa-brands fa-bluetooth'"></i>
                     <span class="hidden sm:inline">{{ bleConnected ? 'Disconnect' : 'Connect' }}</span>
                 </button>
             </div>
@@ -193,57 +193,68 @@
                     </div>
                     
                     <!-- Modal Body -->
-                    <div class="p-6 space-y-6 overflow-y-auto">
+                    <div class="p-6 overflow-y-auto">
                         
-                        <!-- Theme Toggle -->
-                        <div class="flex justify-between items-center">
+                        <!-- Theme Toggle (Always Visible - App Preference) -->
+                        <div class="flex justify-between items-center mb-6">
                             <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Dark Mode</span>
                             <button @click="toggleTheme" class="w-12 h-6 rounded-full p-1 transition-colors duration-300 focus:outline-none" :class="isDark ? 'bg-blue-600' : 'bg-gray-300'">
                                 <div class="w-4 h-4 bg-white rounded-full shadow-md transform transition-transform duration-300" :class="isDark ? 'translate-x-6' : ''"></div>
                             </button>
                         </div>
-                        <hr class="border-gray-200 dark:border-gray-700">
 
-                        <!-- Blink Speed -->
-                        <div>
-                            <label class="flex justify-between text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-                                Blink Delay <span class="text-blue-600 dark:text-blue-400">{{ settings.delay }} ms</span>
-                            </label>
-                            <input type="range" min="50" max="3000" step="50" v-model.number="settings.delay" class="w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer accent-blue-500">
-                        </div>
+                        <hr class="border-gray-200 dark:border-gray-700 mb-6">
 
-                        <!-- Blink Count -->
-                        <div>
-                            <label class="flex justify-between text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-                                Blink Limit <span class="text-blue-600 dark:text-blue-400">{{ settings.limit === -1 ? 'Infinite' : settings.limit }}</span>
-                            </label>
-                            <div class="flex gap-2">
-                                <button @click="settings.limit = -1" class="flex-1 py-2 rounded border text-sm font-medium transition" :class="settings.limit === -1 ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-300 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'">Infinite</button>
-                                <input type="number" v-model.number="settings.limit" min="0" max="1000" class="flex-1 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded px-3 text-center focus:border-blue-500 outline-none dark:text-white" placeholder="Custom">
-                            </div>
-                        </div>
-                        
-                        <button @click="applySettings" class="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-bold shadow-md transition active:scale-95">
-                            Apply Settings
-                        </button>
-
-                        <hr class="border-gray-200 dark:border-gray-700">
-
-                        <!-- Firmware Update -->
-                        <div class="bg-gray-100 dark:bg-gray-900 p-4 rounded-lg border border-dashed border-gray-300 dark:border-gray-600">
-                            <h4 class="text-sm font-bold mb-2 dark:text-gray-200">Firmware Update (OTA)</h4>
-                            <input type="file" ref="fileInput" accept=".bin" class="block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-gray-700 dark:file:text-gray-200"/>
+                        <!-- DEVICE SETTINGS (Only when Connected) -->
+                        <div v-if="bleConnected" class="space-y-6">
                             
-                            <div v-if="ota.active" class="mt-3">
-                                <div class="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
-                                    <div class="bg-blue-600 h-2.5 rounded-full transition-all duration-200" :style="{ width: ota.progress + '%' }"></div>
-                                </div>
-                                <p class="text-xs text-center mt-1 dark:text-gray-400">{{ ota.progress }}%</p>
+                            <!-- Blink Speed -->
+                            <div>
+                                <label class="flex justify-between text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                                    Blink Delay <span class="text-blue-600 dark:text-blue-400">{{ settings.delay }} ms</span>
+                                </label>
+                                <input type="range" min="50" max="3000" step="50" v-model.number="settings.delay" class="w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer accent-blue-500">
                             </div>
 
-                            <button @click="startOTA" :disabled="ota.active" class="mt-3 w-full bg-gray-700 dark:bg-gray-600 hover:bg-gray-600 text-white py-2 rounded-lg text-sm font-medium transition disabled:opacity-50">
-                                {{ ota.active ? 'Updating...' : 'Upload Firmware' }}
+                            <!-- Blink Count -->
+                            <div>
+                                <label class="flex justify-between text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                                    Blink Limit <span class="text-blue-600 dark:text-blue-400">{{ settings.limit === -1 ? 'Infinite' : settings.limit }}</span>
+                                </label>
+                                <div class="flex gap-2">
+                                    <button @click="settings.limit = -1" class="flex-1 py-2 rounded border text-sm font-medium transition" :class="settings.limit === -1 ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-300 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'">Infinite</button>
+                                    <input type="number" v-model.number="settings.limit" min="0" max="1000" class="flex-1 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded px-3 text-center focus:border-blue-500 outline-none dark:text-white" placeholder="Custom">
+                                </div>
+                            </div>
+                            
+                            <button @click="applySettings" class="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-bold shadow-md transition active:scale-95">
+                                Apply Settings
                             </button>
+
+                            <hr class="border-gray-200 dark:border-gray-700">
+
+                            <!-- Firmware Update -->
+                            <div class="bg-gray-100 dark:bg-gray-900 p-4 rounded-lg border border-dashed border-gray-300 dark:border-gray-600">
+                                <h4 class="text-sm font-bold mb-2 dark:text-gray-200">Firmware Update (OTA)</h4>
+                                <input type="file" ref="fileInput" accept=".bin" class="block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-gray-700 dark:file:text-gray-200"/>
+                                
+                                <div v-if="ota.active" class="mt-3">
+                                    <div class="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+                                        <div class="bg-blue-600 h-2.5 rounded-full transition-all duration-200" :style="{ width: ota.progress + '%' }"></div>
+                                    </div>
+                                    <p class="text-xs text-center mt-1 dark:text-gray-400">{{ ota.progress }}%</p>
+                                </div>
+
+                                <button @click="startOTA" :disabled="ota.active" class="mt-3 w-full bg-gray-700 dark:bg-gray-600 hover:bg-gray-600 text-white py-2 rounded-lg text-sm font-medium transition disabled:opacity-50">
+                                    {{ ota.active ? 'Updating...' : 'Upload Firmware' }}
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- DISCONNECTED STATE -->
+                        <div v-else class="text-center py-10 opacity-50">
+                            <i class="fa-brands fa-bluetooth-b text-4xl mb-3 dark:text-gray-500"></i>
+                            <p class="dark:text-gray-400 text-sm">Connect to device to access<br>blink & firmware settings.</p>
                         </div>
 
                     </div>
