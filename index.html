@@ -155,9 +155,6 @@
                 <button @click="toggle('reverse')" :class="getBtnClass('reverse', 'bg-gray-300 text-gray-900')" class="p-4 rounded-lg flex flex-col items-center gap-2 transition active:scale-95">
                     <i class="fas fa-backward text-2xl"></i><span class="font-semibold">Reverse</span>
                 </button>
-                <button @click="toggle('marker')" :class="getBtnClass('marker', 'bg-amber-500')" class="p-4 rounded-lg flex flex-col items-center gap-2 transition active:scale-95">
-                    <i class="fas fa-lightbulb text-2xl"></i><span class="font-semibold">Marker</span>
-                </button>
                 <button @click="toggle('turnLeft')" :class="getBtnClass('turnLeft', 'bg-orange-500')" class="p-4 rounded-lg flex flex-col items-center gap-2 transition active:scale-95">
                     <i class="fas fa-arrow-left text-2xl"></i><span class="font-semibold">Left</span>
                 </button>
@@ -166,6 +163,9 @@
                 </button>
                 <button @click="toggle('hazard')" :class="getBtnClass('hazard', 'bg-orange-600')" class="p-4 rounded-lg flex flex-col items-center gap-2 transition active:scale-95">
                     <i class="fas fa-triangle-exclamation text-2xl"></i><span class="font-semibold">Hazard</span>
+                </button>
+                <button @click="toggle('marker')" :class="getBtnClass('marker', 'bg-amber-500')" class="p-4 rounded-lg flex flex-col items-center gap-2 transition active:scale-95">
+                    <i class="fas fa-lightbulb text-2xl"></i><span class="font-semibold">Marker</span>
                 </button>
                 <!-- AUX Power Button -->
                 <button @click="toggle('aux')" :class="getBtnClass('aux', 'bg-indigo-600')" class="col-span-2 sm:col-span-3 p-4 rounded-lg flex flex-row justify-center items-center gap-3 transition active:scale-95">
