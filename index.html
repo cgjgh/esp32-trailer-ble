@@ -50,6 +50,13 @@
                     },
                     animation: {
                         'bounce-slow': 'bounce 2s infinite',
+                        'glow': 'glow 2s infinite',
+                    },
+                    keyframes: {
+                        glow: {
+                            '0%, 100%': { boxShadow: '0 0 0 0px rgba(37, 99, 235, 0.7)' },
+                            '50%': { boxShadow: '0 0 0 10px rgba(37, 99, 235, 0)' },
+                        }
                     }
                 }
             }
@@ -93,7 +100,28 @@
                 <!-- Using standard icon here, but the page favicon is updated -->
                 <i class="fas fa-truck-ramp-box text-blue-600 dark:text-blue-500 text-2xl"></i>
                 <div>
-                    <h1 class="font-bold text-lg leading-tight">TrailerCheck Pro</h1>
+                    <div class="flex items-center gap-2">
+                        <h1 class="font-bold text-lg leading-tight">TrailerCheck Pro</h1>
+                        
+                        <!-- Signal Strength Indicator (Visible when connected) -->
+                        <div v-if="bleConnected" class="flex items-end gap-0.5 h-4 ml-1" title="Signal Strength">
+                            <!-- Waiting for data (Pulse Animation) -->
+                            <div v-if="rssi === null" class="flex gap-0.5 items-end animate-pulse" title="Searching for signal...">
+                                <div class="w-1 h-1.5 bg-gray-400/40 rounded-sm"></div>
+                                <div class="w-1 h-2.5 bg-gray-400/40 rounded-sm"></div>
+                                <div class="w-1 h-3.5 bg-gray-400/40 rounded-sm"></div>
+                                <div class="w-1 h-4 bg-gray-400/40 rounded-sm"></div>
+                            </div>
+                            <!-- Live Data -->
+                            <template v-else>
+                                <div class="w-1 bg-current rounded-sm transition-all duration-300" :class="rssi > -85 ? 'opacity-100 h-1.5' : 'opacity-30 h-1.5'"></div>
+                                <div class="w-1 bg-current rounded-sm transition-all duration-300" :class="rssi > -75 ? 'opacity-100 h-2.5' : 'opacity-30 h-2.5'"></div>
+                                <div class="w-1 bg-current rounded-sm transition-all duration-300" :class="rssi > -65 ? 'opacity-100 h-3.5' : 'opacity-30 h-3.5'"></div>
+                                <div class="w-1 bg-current rounded-sm transition-all duration-300" :class="rssi > -55 ? 'opacity-100 h-4' : 'opacity-30 h-4'"></div>
+                            </template>
+                        </div>
+                    </div>
+
                     <div class="text-xs flex items-center gap-2" :class="bleConnected ? 'text-green-600 dark:text-green-400' : 'text-gray-500'">
                         <div class="w-2 h-2 rounded-full" :class="bleConnected ? 'bg-green-500 animate-pulse' : 'bg-gray-400'"></div>
                         {{ statusMessage }}
@@ -105,7 +133,9 @@
                     <i class="fas fa-sliders"></i>
                 </button>
                 <button @click="connectBLE" class="px-4 py-2 rounded-lg font-bold shadow-lg transition flex items-center gap-2"
-                    :class="bleConnected ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'">
+                    :class="bleConnected 
+                        ? 'bg-red-500 hover:bg-red-600 text-white' 
+                        : 'bg-blue-600 hover:bg-blue-700 text-white animate-glow'">
                     <i :class="bleConnected ? 'fas fa-power-off' : 'fa-brands fa-bluetooth'"></i>
                     <span class="hidden sm:inline">{{ bleConnected ? 'Disconnect' : 'Connect' }}</span>
                 </button>
@@ -196,10 +226,17 @@
                 <button @click="toggle('marker')" :class="getBtnClass('marker', 'bg-amber-500')" class="p-4 rounded-lg flex flex-col items-center gap-2 transition active:scale-95">
                     <i class="fas fa-lightbulb text-2xl"></i><span class="font-semibold">Marker</span>
                 </button>
-                <!-- AUX Power Button -->
-                <button @click="toggle('aux')" :class="getBtnClass('aux', 'bg-indigo-600')" class="col-span-2 sm:col-span-3 p-4 rounded-lg flex flex-row justify-center items-center gap-3 transition active:scale-95">
-                    <i class="fas fa-bolt text-xl"></i><span class="font-semibold">Aux Power (Always On)</span>
-                </button>
+                
+                <!-- AUX Power Button & Info -->
+                <div class="col-span-2 sm:col-span-3 flex flex-col gap-1">
+                    <button @click="toggle('aux')" :class="getBtnClass('aux', 'bg-indigo-600')" class="w-full p-4 rounded-lg flex flex-row justify-center items-center gap-3 transition active:scale-95">
+                        <i class="fas fa-bolt text-xl"></i><span class="font-semibold">Aux Power (Always On)</span>
+                    </button>
+                    <div v-if="bleConnected" class="flex justify-center items-center text-xs text-gray-500 dark:text-gray-400 gap-2 mt-2 transition-all duration-300">
+                        <i class="fas fa-users text-gray-400"></i>
+                        <span>Connected Clients: {{ clientCount }}</span>
+                    </div>
+                </div>
             </div>
         </main>
 
@@ -272,8 +309,8 @@
                                     <p class="text-xs text-center mt-1 dark:text-gray-400">{{ ota.progress }}%</p>
                                 </div>
 
-                                <button @click="startOTA" :disabled="ota.active" class="mt-3 w-full bg-gray-700 dark:bg-gray-600 hover:bg-gray-600 text-white py-2 rounded-lg text-sm font-medium transition disabled:opacity-50">
-                                    {{ ota.active ? 'Updating...' : 'Upload Firmware' }}
+                                <button @click="startOTA" :disabled="ota.active" class="mt-3 w-full bg-gray-700 dark:bg-gray-600 hover:bg-gray-600 text-white py-2 rounded-lg text-sm font-medium transition disabled:opacity-50" :class="ota.complete ? 'bg-green-600 hover:bg-green-700' : ''">
+                                    {{ ota.complete ? 'Success! Restarting...' : (ota.active ? 'Updating...' : 'Upload Firmware') }}
                                 </button>
                             </div>
                         </div>
@@ -294,7 +331,7 @@
                                     <i class="fas fa-share-alt mr-1"></i> Share
                                 </button>
                             </div>
-                            <!-- Tighter white box (p-1, w-fit, mx-auto) -->
+                            <!-- Tighter white box -->
                             <div class="bg-white p-1 rounded-lg shadow-inner border border-gray-200 w-fit mx-auto">
                                 <canvas id="qr-code" class="block"></canvas>
                             </div>
@@ -325,11 +362,13 @@
                             To use this app on your iPhone or iPad, you need to use the <span class="font-bold text-blue-500">Bluefy</span> browser.
                         </p>
 
-                        <a href="https://apps.apple.com/us/app/bluefy-web-ble-browser/id1492822055" target="_blank" 
+                        <a @click.prevent="copyUrlForBluefy" href="https://apps.apple.com/us/app/bluefy-web-ble-browser/id1492822055" target="_blank" 
                            class="w-full mt-2 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold shadow-lg transition flex items-center justify-center gap-2">
                            <i class="fas fa-external-link-alt"></i>
                            Get Bluefy on App Store
                         </a>
+                        
+                        <p class="text-xs text-gray-400 mt-2">Tip: URL copied to clipboard for easy pasting into Bluefy.</p>
 
                         <button @click="showBluefyModal = false" class="mt-2 text-gray-400 text-sm hover:text-gray-600 dark:hover:text-gray-200 underline">
                             Close
@@ -382,6 +421,8 @@
                     bleConnected: false,
                     statusMessage: 'Ready',
                     voltage: 0, current: 0,
+                    clientCount: 0,
+                    rssi: null,
                     chars: {},
                     lightStates: { brake: false, reverse: false, marker: false, turnLeft: false, turnRight: false, hazard: false, aux: true },
                     blinkState: false, 
@@ -396,7 +437,7 @@
                     settings: { delay: 500, limit: -1 },
                     
                     // OTA State
-                    ota: { active: false, progress: 0 },
+                    ota: { active: false, progress: 0, complete: false },
                     
                     // QR
                     currentUrl: window.location.href
@@ -417,6 +458,19 @@
                         if (this.bleConnected) {
                             this.fetchDeviceSettings();
                         }
+                    }
+                },
+                bleConnected(newVal) {
+                    if (!newVal) {
+                        // Disconnect Cleanup
+                        this.rssi = null;
+                        this.voltage = 0;
+                        this.current = 0;
+                        this.clientCount = 0;
+                        // Reset all lights EXCEPT aux, set aux to true default
+                        Object.keys(this.lightStates).forEach(k => {
+                            this.lightStates[k] = (k === 'aux');
+                        });
                     }
                 }
             },
@@ -440,17 +494,10 @@
                     this.applyTheme();
                 },
                 
-                // Updated: More descriptive toast with optional title
                 showToast(msg, type='info', title='') {
-                    // Clear existing timer if quickly triggering multiple
                     if (this.toastTimer) clearTimeout(this.toastTimer);
-                    
                     this.toast = { show: true, msg, type, title };
-                    
-                    // Longer timeout for longer messages (5s vs 3s)
-                    this.toastTimer = setTimeout(() => {
-                        this.toast.show = false;
-                    }, 5000);
+                    this.toastTimer = setTimeout(() => { this.toast.show = false; }, 5000);
                 },
 
                 getBtnClass(key, activeClass) {
@@ -462,13 +509,19 @@
                 generateQR() {
                     const canvas = document.getElementById('qr-code');
                     if (canvas) {
-                        // Always create new instance to handle DOM re-creation
-                        new QRious({
-                            element: canvas,
-                            value: this.currentUrl,
-                            size: 150,
-                            level: 'H'
-                        });
+                        new QRious({ element: canvas, value: this.currentUrl, size: 150, level: 'H' });
+                    }
+                },
+
+                async copyUrlForBluefy() {
+                    try {
+                        await navigator.clipboard.writeText(this.currentUrl);
+                        this.showToast("App URL copied! Open Bluefy.", "success");
+                        setTimeout(() => {
+                            window.open("https://apps.apple.com/us/app/bluefy-web-ble-browser/id1492822055", "_blank");
+                        }, 500);
+                    } catch(e) {
+                        window.open("https://apps.apple.com/us/app/bluefy-web-ble-browser/id1492822055", "_blank");
                     }
                 },
 
@@ -480,11 +533,8 @@
                                 text: 'Control your smart trailer controller with this app.',
                                 url: this.currentUrl
                             });
-                        } catch (err) {
-                            console.error('Share failed:', err);
-                        }
+                        } catch (err) { console.error('Share failed:', err); }
                     } else {
-                        // Fallback: Copy to clipboard
                         try {
                             await navigator.clipboard.writeText(this.currentUrl);
                             this.showToast("URL copied to clipboard!", "success");
@@ -497,20 +547,10 @@
                 async connectBLE() {
                     if (this.bleConnected) { window.location.reload(); return; }
                     
-                    // Check for Bluetooth Support
                     if (!navigator.bluetooth) {
-                        // Detect iOS specifically
-                        const isIOS = [
-                            'iPad Simulator', 'iPhone Simulator', 'iPod Simulator', 'iPad', 'iPhone', 'iPod'
-                        ].includes(navigator.platform) || (navigator.userAgent.includes("Mac") && "ontouchend" in document);
-
-                        if (isIOS) {
-                            this.showBluefyModal = true;
-                            return;
-                        } else {
-                            this.showToast("Bluetooth is not supported on this browser. Please use Chrome, Edge, or Bluefy.", "error", "Not Supported");
-                            return;
-                        }
+                        const isIOS = ['iPad Simulator', 'iPhone Simulator', 'iPod Simulator', 'iPad', 'iPhone', 'iPod'].includes(navigator.platform) || (navigator.userAgent.includes("Mac") && "ontouchend" in document);
+                        if (isIOS) { this.showBluefyModal = true; return; } 
+                        else { this.showToast("Bluetooth is not supported on this browser.", "error", "Not Supported"); return; }
                     }
 
                     try {
@@ -525,26 +565,34 @@
                             this.statusMessage = "Disconnected";
                             this.showToast("Connection Lost", "error");
                         });
+                        
+                        // RSSI Listener (If supported by browser/device)
+                        device.addEventListener('advertisementreceived', (event) => {
+                             this.rssi = event.rssi;
+                        });
 
                         const server = await device.gatt.connect();
                         const service = await server.getPrimaryService(UUIDS.SERVICE);
                         
-                        // Get all characteristics
                         this.chars.command = await service.getCharacteristic(UUIDS.COMMAND);
                         this.chars.settings = await service.getCharacteristic(UUIDS.SETTINGS);
                         this.chars.ota = await service.getCharacteristic(UUIDS.OTA_DATA);
                         
-                        // Setup Telemetry
                         const telemChar = await service.getCharacteristic(UUIDS.TELEMETRY);
                         await telemChar.startNotifications();
                         telemChar.addEventListener('characteristicvaluechanged', this.handleTelemetry);
 
                         this.bleConnected = true;
                         this.statusMessage = "Connected";
-                        this.showToast("Connected successfully to trailer unit.", "success", "Connected");
+                        this.showToast("Connected successfully.", "success", "Connected");
+                        
+                        // Try to watch RSSI (Requires device to keep advertising)
+                        try {
+                             await device.watchAdvertisements();
+                        } catch(e) { console.log("RSSI watch not supported/failed"); }
+
                     } catch (err) {
                         console.error(err);
-                        // Handle user cancellation gracefully
                         if (err.name === 'NotFoundError' || err.message.includes('cancelled')) {
                             this.statusMessage = "Ready";
                             return; 
@@ -558,8 +606,10 @@
                     try {
                         const decoder = new TextDecoder('utf-8');
                         const json = JSON.parse(decoder.decode(event.target.value));
-                        if(json.v) this.voltage = json.v;
-                        if(json.c) this.current = json.c;
+                        if(json.v !== undefined) this.voltage = json.v;
+                        if(json.c !== undefined) this.current = json.c;
+                        if(json.n !== undefined) this.clientCount = json.n;
+                        
                         if(json.s) Object.assign(this.lightStates, { 
                             brake: json.s.brake, reverse: json.s.rev, marker: json.s.mark, 
                             turnLeft: json.s.tl, turnRight: json.s.tr, hazard: json.s.haz, aux: json.s.aux 
@@ -573,7 +623,6 @@
                     const newState = !this.lightStates[key];
                     this.lightStates[key] = newState; // Optimistic update
                     
-                    // Mutual Exclusivity Logic (Mirrors Firmware Logic)
                     if (newState) {
                         if (key === 'hazard') { this.lightStates.turnLeft = false; this.lightStates.turnRight = false; }
                         if (key === 'turnLeft') { this.lightStates.hazard = false; this.lightStates.turnRight = false; }
@@ -596,9 +645,7 @@
                             if (json.delay) this.settings.delay = json.delay;
                             if (json.limit !== undefined) this.settings.limit = json.limit;
                         }
-                    } catch (e) {
-                        console.warn("Failed to sync settings", e);
-                    }
+                    } catch (e) { console.warn("Failed to sync settings", e); }
                 },
 
                 async applySettings() {
@@ -608,28 +655,21 @@
                         const encoder = new TextEncoder();
                         await this.chars.settings.writeValue(encoder.encode(payload));
                         this.showToast("Blink configuration updated.", "success", "Settings Saved");
-                    } catch (e) {
-                        this.showToast("Failed to save settings.", "error");
-                    }
+                    } catch (e) { this.showToast("Failed to save settings.", "error"); }
                 },
                 
                 async restartDevice() {
                     if (!this.bleConnected) return;
                     if (!confirm("Are you sure you want to restart the trailer controller?")) return;
-
                     try {
                         const encoder = new TextEncoder();
-                        // Requires updated firmware to handle 'restart' command
                         await this.chars.command.writeValue(encoder.encode("restart"));
                         this.showToast("Device restarting...", "info");
                         this.bleConnected = false;
                         this.statusMessage = "Restarting...";
-                    } catch (e) {
-                        this.showToast("Failed to send restart command.", "error");
-                    }
+                    } catch (e) { this.showToast("Failed to send restart command.", "error"); }
                 },
 
-                // --- OTA LOGIC ---
                 async startOTA() {
                     const file = this.$refs.fileInput.files[0];
                     if (!file) return this.showToast("Please select a .bin firmware file first.", "error", "No File");
@@ -637,40 +677,48 @@
 
                     this.ota.active = true;
                     this.ota.progress = 0;
+                    this.ota.complete = false;
                     this.showToast("Do not close the app.", "info", "Starting Update");
 
                     try {
-                        // 1. Send Start Command
                         const encoder = new TextEncoder();
                         const startCmd = `ota_start:${file.size}`;
                         await this.chars.command.writeValue(encoder.encode(startCmd));
 
-                        // 2. Read File
                         const buffer = await file.arrayBuffer();
                         const bytes = new Uint8Array(buffer);
-                        const chunkSize = 512; // Safe chunk size for BLE to avoid congestion
+                        const chunkSize = 512; 
                         let offset = 0;
 
-                        // 3. Loop Chunks
                         while (offset < bytes.length) {
                             const end = Math.min(offset + chunkSize, bytes.length);
                             const chunk = bytes.slice(offset, end);
-                            
-                            // Write without response for speed
                             await this.chars.ota.writeValueWithoutResponse(chunk);
-                            
                             offset += chunkSize;
                             this.ota.progress = Math.round((offset / bytes.length) * 100);
-                            
-                            // Tiny delay to prevent congestion in the browser's BLE stack
                             await new Promise(r => setTimeout(r, 10));
                         }
 
-                        // 4. Send End Command
                         this.showToast("Finalizing installation...", "info");
-                        await this.chars.command.writeValue(encoder.encode("ota_end"));
                         
+                        try {
+                            // The ESP32 restarts very quickly after receiving this.
+                            // Often the "OK" response doesn't make it back in time to the browser,
+                            // causing a "NetworkError: GATT Server is disconnected" error.
+                            await this.chars.command.writeValue(encoder.encode("ota_end"));
+                        } catch (e) {
+                            // If we get a disconnect error here, it likely means the device received the command 
+                            // and rebooted successfully. We treat this as success.
+                            console.warn("Write failed (expected if device rebooted):", e);
+                            if (!e.message.includes('GATT Server is disconnected')) {
+                                throw e; // Re-throw if it's a different error
+                            }
+                        }
+                        
+                        // Success UI Update
+                        this.ota.complete = true;
                         this.showToast("Update Complete! Rebooting device...", "success");
+                        
                         setTimeout(() => window.location.reload(), 3000);
 
                     } catch (e) {
